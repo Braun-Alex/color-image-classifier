@@ -1,6 +1,30 @@
-#include <iostream>
+#include "utils.h"
+#include "color_moments.h"
+
+#include <rapidjson/document.h>
+
+const std::string TRAIN_DATA = "train_data.json";
 
 int main() {
-    std::cout << "AAA";
-    return 0;
+    std::string jsonObject = fileToString(TRAIN_DATA);
+
+    rapidjson::Document document;
+    document.Parse(jsonObject.c_str());
+
+    if (document.IsObject()) {
+        const rapidjson::Value& data = document["data"];
+        const rapidjson::Value& results = data["results"];
+
+        for (rapidjson::SizeType imagePairIndex = 0; imagePairIndex < results.Size(); ++imagePairIndex) {
+            const rapidjson::Value& imagePair = results[imagePairIndex];
+            const rapidjson::Value& representativeData = imagePair["representativeData"];
+
+            const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
+            const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
+
+            cv::Mat firstImage = cv::imread(firstImageUrl);
+            cv::Mat secondImage = cv::imread(secondImageUrl);
+            std::cout << firstImage << " " << secondImage << "\n";
+        }
+    }
 }
