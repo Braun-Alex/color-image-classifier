@@ -5,8 +5,9 @@ set(CMAKE_CXX_STANDARD 23)
 set(HEADERS utils.h color_moments.h)
 set(SOURCES utils.cpp color_moments.cpp main.cpp)
 
+find_package(CURL REQUIRED)
 find_package(OpenCV REQUIRED)
 
 add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} ${CURL_LIBRARIES} ${OpenCV_LIBS})

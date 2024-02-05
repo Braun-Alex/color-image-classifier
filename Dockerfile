@@ -2,10 +2,19 @@ FROM ubuntu:latest
 
 WORKDIR /classifier
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake g++ rapidjson-dev libopencv-dev
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    curl \
+    cmake \
+    g++ \
+    rapidjson-dev \
+    libopencv-dev \
+    mpich \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . /classifier/
 
 RUN cmake . && make
 
-CMD ./color_image_classifier
+RUN chmod +x /classifier/entrypoint.sh
+
+ENTRYPOINT ["/classifier/entrypoint.sh"]

@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "color_moments.h"
 
 #include <rapidjson/document.h>
 
@@ -22,9 +21,9 @@ int main() {
             const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
             const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
 
-            cv::Mat firstImage = cv::imread(firstImageUrl);
-            cv::Mat secondImage = cv::imread(secondImageUrl);
-            std::cout << firstImage << " " << secondImage << "\n";
+            cv::Mat firstImage = downloadImage(firstImageUrl);
+            cv::Mat secondImage = downloadImage(secondImageUrl);
+            std::cout << "Image " << imagePairIndex << "\n";
         }
     }
 }
