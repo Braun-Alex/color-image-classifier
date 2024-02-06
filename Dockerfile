@@ -3,12 +3,14 @@ FROM ubuntu:latest
 WORKDIR /classifier
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    curl \
+    libcurl4-openssl-dev \
     cmake \
     g++ \
     rapidjson-dev \
+    openmpi-bin \
+    openmpi-common \
+    libopenmpi-dev \
     libopencv-dev \
-    mpich \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /classifier/

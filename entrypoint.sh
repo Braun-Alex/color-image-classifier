@@ -1,3 +1,3 @@
 #!/bin/bash
 
-mpiexec -n ${nproc} ./color_image_classifier
+mpirun --allow-run-as-root --oversubscribe -n $(nproc) ./color_image_classifier

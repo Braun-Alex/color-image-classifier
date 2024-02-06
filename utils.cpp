@@ -47,4 +47,6 @@ cv::Mat downloadImage(const std::string& url) {
 
         return cv::imdecode(cv::Mat(1, buffer.size(), CV_8UC1, buffer.data()), cv::IMREAD_COLOR);
     }
+
+    throw std::runtime_error("Could not initialize CURL instance");
 }
