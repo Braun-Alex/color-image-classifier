@@ -10,3 +10,4 @@
 std::string fileToString(const std::string& jsonFileName);
 size_t writeCallback(void* data, size_t size, size_t nMemBytes, std::vector<unsigned char>* buffer);
 cv::Mat downloadImage(const std::string& url);
+void saveFile(const std::string& fileName, const char* data);

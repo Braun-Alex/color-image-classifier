@@ -50,3 +50,12 @@ cv::Mat downloadImage(const std::string& url) {
 
     throw std::runtime_error("Could not initialize CURL instance");
 }
+
+void saveFile(const std::string& fileName, const char* data) {
+    std::ofstream file(fileName);
+
+    if (file) {
+        file << data;
+        file.close();
+    }
+}
