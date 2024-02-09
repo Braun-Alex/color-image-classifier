@@ -183,9 +183,12 @@ void useModel(int worldSize, int worldRank, double threshold, const std::string&
         if (worldRank == ROOT_RANK) {
             std::cout << "\n";
 
-            saveFile(modelAnswerFileName, totalAnswer);
-
-            std::cout << "Model answer has been saved in CMake build directory as " << modelAnswerFileName << " file\n";
+            if (modelAnswerFileName.empty()) {
+                std::cout << totalAnswer << "\n";
+            } else {
+                saveFile(modelAnswerFileName, totalAnswer);
+                std::cout << "Model answer has been saved in CMake build directory as " << modelAnswerFileName << " file\n";
+            }
 
             free(totalAnswer);
             free(displs);

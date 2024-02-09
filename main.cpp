@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
     int worldRank;
     MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
 
-    int choice, datasetLength;
+    int choice, answer, datasetLength;
     double threshold;
     std::string dataType, datasetPath, modelAnswerFileName;
 
@@ -45,16 +45,27 @@ int main(int argc, char* argv[]) {
         datasetLength = static_cast<int>(datasetPath.size());
 
         if (choice == 2) {
-            std::cout << "Enter the name of the CSV file where you want to save the model answer in the CMake build directory:\n";
-            std::getline(std::cin, modelAnswerFileName);
+            std::cout << "Did you use Docker launching program? If yes, model answer will be printed in console, but not CSV file\n"
+                      << "1) Yes\n"
+                      << "2) No\n";
 
-            std::string tmpFileName = modelAnswerFileName;
-            tmpFileName.erase(std::remove_if(tmpFileName.begin(), tmpFileName.end(), isspace), tmpFileName.end());
-            while (tmpFileName.size() < 5 || tmpFileName.substr(tmpFileName.size() - 4) != ".csv" ) {
-                std::cout << "File does not have name. Please enter the name of the CSV file where you want to save the model answer in the CMake build directory again:\n";
+            while (!(std::cin >> answer) || (answer < 1 || answer > 2)) {
+                repeatEntering("Entered invalid answer. Please enter 1 or 2\n");
+            }
+
+            if (answer == 2) {
+                std::cout << "Enter the name of the CSV file where you want to save the model answer in the CMake build directory:\n";
                 std::getline(std::cin, modelAnswerFileName);
-                tmpFileName = modelAnswerFileName;
+
+                std::string tmpFileName = modelAnswerFileName;
                 tmpFileName.erase(std::remove_if(tmpFileName.begin(), tmpFileName.end(), isspace), tmpFileName.end());
+                while (tmpFileName.size() < 5 || tmpFileName.substr(tmpFileName.size() - 4) != ".csv") {
+                    std::cout << "File does not have name. Please enter the name of the CSV file where you want to save the model answer in the CMake build directory again:\n";
+                    std::getline(std::cin, modelAnswerFileName);
+                    tmpFileName = modelAnswerFileName;
+                    tmpFileName.erase(std::remove_if(tmpFileName.begin(), tmpFileName.end(), isspace),
+                                      tmpFileName.end());
+                }
             }
         }
     }
