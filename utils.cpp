@@ -60,22 +60,8 @@ void saveFile(const std::string& fileName, const char* data) {
     }
 }
 
-void parseCSV(const std::string& csvString, std::vector<double>& distances, std::vector<int>& labels) {
-    std::istringstream csvStream(csvString);
-    std::string line;
-
-    while (std::getline(csvStream, line)) {
-        std::istringstream lineStream(line);
-        std::string cell;
-        std::vector<std::string> cells;
-
-        while (std::getline(lineStream, cell, ',')) {
-            cells.push_back(cell);
-        }
-
-        if (cells.size() == 2) {
-            distances.push_back(std::stod(cells[0]));
-            labels.push_back(std::stoi(cells[1]));
-        }
-    }
+void repeatEntering(const std::string& reason) {
+    std::cout << reason;
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }

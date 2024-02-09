@@ -19,7 +19,7 @@ std::vector<cv::Scalar> calculateMoments(const cv::Mat& image) {
     return imageMoments;
 }
 
-bool areDuplicatesUsingMoments(const std::vector<cv::Scalar>& firstImageMoments,
+bool areDuplicates(const std::vector<cv::Scalar>& firstImageMoments,
                    const std::vector<cv::Scalar>& secondImageMoments,
                    double threshold) {
     for (int i = 0; i < COLOR_CHANNEL_COUNT; ++i) {
