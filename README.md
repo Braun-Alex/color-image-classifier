@@ -4,12 +4,12 @@
 This project implements the color matching algorithm, specifically the "Color Moments Method," using C++ as the primary programming language. It leverages key technologies such as curl for downloading images into memory, CMake for compilation, RapidJSON for processing JSON objects, MPI for parallelizing the program on multi-core clusters using distributed memory, OpenCV for computer vision tasks, and Docker for building and running the program across different operating systems and devices.
 
 ### Key Technologies 🛠️
-- **curl** 🌐: For image downloading.
-- **CMake** 🏗: For project compilation.
-- **RapidJSON** 📄: For JSON object processing.
-- **MPI** 💻: For program parallelization on multi-core clusters with distributed memory.
-- **OpenCV** 📸: The most widely used computer vision library.
-- **Docker** 🐳: For building and running the program on various platforms.
+- **curl** 🌐. For image downloading.
+- **CMake** 🏗. For project compilation.
+- **RapidJSON** 📄. For JSON object processing.
+- **MPI** 💻. For program parallelization on multi-core clusters with distributed memory.
+- **OpenCV** 📸. The most widely used computer vision library.
+- **Docker** 🐳. For building and running the program on various platforms.
 
 ### External Libraries Used 📚
 - `libcurl4-openssl-dev`
