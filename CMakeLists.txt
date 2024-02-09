@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.22.1)
 project(color_image_classifier)
 
 set(CMAKE_CXX_STANDARD 23)
-set(HEADERS utils.h color_moments.h core.h)
-set(SOURCES utils.cpp color_moments.cpp core.cpp main.cpp)
+set(HEADERS utils.h phash.h color_moments.h core.h)
+set(SOURCES utils.cpp phash.cpp color_moments.cpp core.cpp main.cpp)
 
 find_package(CURL REQUIRED)
 find_package(MPI REQUIRED)

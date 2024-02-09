@@ -1,8 +1,7 @@
 #include "color_moments.h"
 
 std::vector<cv::Scalar> calculateMoments(const cv::Mat& image) {
-    std::vector<cv::Scalar> imageMoments;
-    imageMoments.reserve(COLOR_CHANNEL_COUNT);
+    std::vector<cv::Scalar> imageMoments(COLOR_CHANNEL_COUNT);
 
     cv::Scalar mean, stdDev;
     cv::meanStdDev(image, mean, stdDev);
@@ -20,7 +19,7 @@ std::vector<cv::Scalar> calculateMoments(const cv::Mat& image) {
     return imageMoments;
 }
 
-bool areDuplicates(const std::vector<cv::Scalar>& firstImageMoments,
+bool areDuplicatesUsingMoments(const std::vector<cv::Scalar>& firstImageMoments,
                    const std::vector<cv::Scalar>& secondImageMoments,
                    double threshold) {
     for (int i = 0; i < COLOR_CHANNEL_COUNT; ++i) {
