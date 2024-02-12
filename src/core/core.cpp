@@ -83,7 +83,7 @@ void testModel(int worldSize, int worldRank, double threshold, const std::string
                       << "\n6) Total FN: " << totalFalseNegatives
                       << "\n7) Precision: " << precision
                       << "\n8) Recall: " << recall
-                      << "\n9) F1 score: " << f1Score << "\n";
+                      << "\n9) F1-score: " << f1Score << "\n";
         }
     }
 }
