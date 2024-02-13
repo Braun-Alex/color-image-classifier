@@ -1,3 +1,4 @@
+#include "metrics.h"
 #include "core.h"
 
 void testModel(int worldSize, int worldRank, double threshold, const std::string& datasetPath) {
@@ -6,12 +7,9 @@ void testModel(int worldSize, int worldRank, double threshold, const std::string
     rapidjson::Document document;
     document.Parse(jsonObject.c_str());
 
-    int localDuplicates = 0;
-    int localRecognizedDuplicates = 0;
-
-    int localTruePositives = 0;
-    int localFalsePositives = 0;
-    int localFalseNegatives = 0;
+    int localTP = 0;
+    int localFP = 0;
+    int localFN = 0;
 
     if (document.IsObject()) {
         const rapidjson::Value& data = document["data"];
@@ -30,7 +28,6 @@ void testModel(int worldSize, int worldRank, double threshold, const std::string
 
             const std::string answer = imagePair["answers"][0]["answer"][0]["id"].GetString();
             const int areExpectedDuplicates = std::stoi(answer);
-            localDuplicates += areExpectedDuplicates;
 
             const rapidjson::Value& representativeData = imagePair["representativeData"];
 
@@ -45,14 +42,12 @@ void testModel(int worldSize, int worldRank, double threshold, const std::string
 
             const bool isRecognized = areDuplicates(firstImageMoments, secondImageMoments, threshold);
 
-            localRecognizedDuplicates += static_cast<int>(isRecognized);
-
             if (isRecognized && areExpectedDuplicates) {
-                localTruePositives += 1;
+                localTP += 1;
             } else if (isRecognized) {
-                localFalsePositives += 1;
+                localFP += 1;
             } else if (areExpectedDuplicates) {
-                localFalseNegatives += 1;
+                localFN += 1;
             }
 
             if (worldRank == ROOT_RANK) {
@@ -63,27 +58,26 @@ void testModel(int worldSize, int worldRank, double threshold, const std::string
             }
         }
 
-        int totalDuplicates, totalRecognizedDuplicates, totalTruePositives, totalFalsePositives, totalFalseNegatives;
-        MPI_Reduce(&localDuplicates, &totalDuplicates, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&localRecognizedDuplicates, &totalRecognizedDuplicates, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&localTruePositives, &totalTruePositives, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&localFalsePositives, &totalFalsePositives, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&localFalseNegatives, &totalFalseNegatives, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        int totalTP, totalFP, totalFN;
+        MPI_Reduce(&localTP, &totalTP, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&localFP, &totalFP, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&localFN, &totalFN, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
         if (worldRank == ROOT_RANK) {
-            const double precision = static_cast<double>(totalTruePositives) / static_cast<double>(totalTruePositives + totalFalsePositives);
-            const double recall = static_cast<double>(totalTruePositives) / static_cast<double>(totalTruePositives + totalFalseNegatives);
-            const double f1Score = 2 * precision * recall / (precision + recall);
+            const auto datasetSize = static_cast<int>(results.Size());
 
-            std::cout << "\n1) Total images: " << results.Size()
-                      << "\n2) Total duplicates: " << totalDuplicates
-                      << "\n3) Total recognized duplicates: " << totalRecognizedDuplicates
-                      << "\n4) Total TP: " << totalTruePositives
-                      << "\n5) Total FP: " << totalFalsePositives
-                      << "\n6) Total FN: " << totalFalseNegatives
-                      << "\n7) Precision: " << precision
-                      << "\n8) Recall: " << recall
-                      << "\n9) F1-score: " << f1Score << "\n";
+            int totalTN = datasetSize - totalTP - totalFP - totalFN;
+
+            const std::vector<double> keyMetrics = calculateKeyMetrics(totalTP, totalFP,totalTN, totalFN, datasetSize);
+
+            std::cout << "\n1) Total images: " << datasetSize
+                      << "\n2) Total TP: " << totalTP
+                      << "\n3) Total FP: " << totalFP
+                      << "\n4) Total TN: " << totalTN
+                      << "\n5) Total FN: " << totalFN
+                      << "\n6) Weighted average precision: " << keyMetrics[0]
+                      << "\n7) Weighted average recall: " << keyMetrics[1]
+                      << "\n8) Weighted average F1-score: " << keyMetrics[2] << "\n";
         }
     }
 }

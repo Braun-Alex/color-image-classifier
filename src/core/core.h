@@ -2,7 +2,6 @@
 
 #include "color_moments.h"
 
-#include <filesystem>
 #include <rapidjson/document.h>
 #include <mpi.h>
 
