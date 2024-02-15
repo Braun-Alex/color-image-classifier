@@ -20,7 +20,7 @@ size_t writeCallback(void* data, size_t size, size_t nMemBytes, std::vector<unsi
     return totalSize;
 }
 
-cv::Mat downloadImage(const std::string& url) {
+cv::Mat downloadImage(const std::string& url, cv::ImreadModes mode) {
     CURL* curlInstance;
     CURLcode result;
     std::vector<unsigned char> buffer;
@@ -45,7 +45,7 @@ cv::Mat downloadImage(const std::string& url) {
             throw std::runtime_error("Image \"" + url + "\" contains no data!");
         }
 
-        return cv::imdecode(cv::Mat(1, buffer.size(), CV_8UC1, buffer.data()), cv::IMREAD_COLOR);
+        return cv::imdecode(cv::Mat(1, buffer.size(), CV_8UC1, buffer.data()), mode);
     }
 
     throw std::runtime_error("Could not initialize CURL instance");

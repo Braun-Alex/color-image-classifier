@@ -1,7 +1,7 @@
 #include "metrics.h"
 #include "core.h"
 
-void testModel(int worldSize, int worldRank, double threshold, const std::string& datasetPath) {
+void testModel(int worldSize, int worldRank, int cvMethod, int threshold, const std::string& datasetPath) {
     std::string jsonObject = fileToString(datasetPath);
 
     rapidjson::Document document;
@@ -23,38 +23,87 @@ void testModel(int worldSize, int worldRank, double threshold, const std::string
             endIndex = results.Size();
         }
 
-        for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
-            const rapidjson::Value& imagePair = results[imagePairIndex];
+        if (cvMethod == 1) {
+            for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
+                const rapidjson::Value &imagePair = results[imagePairIndex];
 
-            const std::string answer = imagePair["answers"][0]["answer"][0]["id"].GetString();
-            const int areExpectedDuplicates = std::stoi(answer);
+                const std::string answer = imagePair["answers"][0]["answer"][0]["id"].GetString();
+                const int areExpectedDuplicates = std::stoi(answer);
 
-            const rapidjson::Value& representativeData = imagePair["representativeData"];
+                const rapidjson::Value &representativeData = imagePair["representativeData"];
 
-            const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
-            const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
+                const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
+                const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
 
-            const cv::Mat firstImage = downloadImage(firstImageUrl);
-            const cv::Mat secondImage = downloadImage(secondImageUrl);
+                const cv::Mat firstImage = downloadImage(firstImageUrl, cv::IMREAD_COLOR);
+                const cv::Mat secondImage = downloadImage(secondImageUrl, cv::IMREAD_COLOR);
 
-            const std::vector<cv::Scalar> firstImageMoments = calculateMoments(firstImage);
-            const std::vector<cv::Scalar> secondImageMoments = calculateMoments(secondImage);
+                const std::vector<cv::Scalar> firstImageMoments = moments::calculateMoments(firstImage);
+                const std::vector<cv::Scalar> secondImageMoments = moments::calculateMoments(secondImage);
 
-            const bool isRecognized = areDuplicates(firstImageMoments, secondImageMoments, threshold);
+                const bool isRecognized = moments::areDuplicates(firstImageMoments, secondImageMoments, threshold);
 
-            if (isRecognized && areExpectedDuplicates) {
-                localTP += 1;
-            } else if (isRecognized) {
-                localFP += 1;
-            } else if (areExpectedDuplicates) {
-                localFN += 1;
+                if (isRecognized && areExpectedDuplicates) {
+                    localTP += 1;
+                } else if (isRecognized) {
+                    localFP += 1;
+                } else if (areExpectedDuplicates) {
+                    localFN += 1;
+                }
+
+                if (worldRank == ROOT_RANK) {
+                    double estimatedProgress = 100 * static_cast<double>(imagePairIndex - startIndex + 1) /
+                                               static_cast<double>(endIndex - startIndex);
+                    std::string progress = std::to_string(estimatedProgress);
+                    progress = std::string(progress.begin(), std::find(progress.begin(), progress.end(), '.'));
+                    std::cout << "\rTesting recognizing model... Progress: " << progress + "%" << std::flush;
+                }
             }
+        } else if (cvMethod == 2) {
+            std::vector<std::vector<cv::DMatch>> imageMatches;
+            cv::Ptr<cv::SIFT> siftInstance = cv::SIFT::create();
 
-            if (worldRank == ROOT_RANK) {
-                double estimatedProgress = 100 * static_cast<double>(imagePairIndex - startIndex + 1) / static_cast<double>(endIndex - startIndex);
-                std::string progress = std::to_string(estimatedProgress);
-                progress = std::string(progress.begin(), std::find(progress.begin(), progress.end(), '.'));
-                std::cout << "\rTesting recognizing model... Progress: " << progress + "%" << std::flush;
+            cv::Ptr<cv::flann::IndexParams> indexParams = cv::makePtr<cv::flann::KDTreeIndexParams>();
+            indexParams->setAlgorithm(cvflann::FLANN_INDEX_KDTREE);
+            indexParams->setInt("trees", 5);
+
+            cv::Ptr<cv::flann::SearchParams> searchParams = cv::makePtr<cv::flann::SearchParams>();
+            searchParams->setInt("checks", 50);
+
+            cv::Ptr<cv::FlannBasedMatcher> matcher = cv::makePtr<cv::FlannBasedMatcher>(indexParams, searchParams);
+            for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
+                const rapidjson::Value &imagePair = results[imagePairIndex];
+
+                const std::string answer = imagePair["answers"][0]["answer"][0]["id"].GetString();
+                const int areExpectedDuplicates = std::stoi(answer);
+
+                const rapidjson::Value &representativeData = imagePair["representativeData"];
+
+                const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
+                const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
+
+                const cv::Mat firstImage = downloadImage(firstImageUrl, cv::IMREAD_GRAYSCALE);
+                const cv::Mat secondImage = downloadImage(secondImageUrl, cv::IMREAD_GRAYSCALE);
+
+                sift::calculateMatches(firstImage, secondImage, imageMatches, siftInstance, matcher);
+
+                const bool isRecognized = sift::areDuplicates(imageMatches, threshold);
+
+                if (isRecognized && areExpectedDuplicates) {
+                    localTP += 1;
+                } else if (isRecognized) {
+                    localFP += 1;
+                } else if (areExpectedDuplicates) {
+                    localFN += 1;
+                }
+
+                if (worldRank == ROOT_RANK) {
+                    double estimatedProgress = 100 * static_cast<double>(imagePairIndex - startIndex + 1) /
+                                               static_cast<double>(endIndex - startIndex);
+                    std::string progress = std::to_string(estimatedProgress);
+                    progress = std::string(progress.begin(), std::find(progress.begin(), progress.end(), '.'));
+                    std::cout << "\rTesting recognizing model... Progress: " << progress + "%" << std::flush;
+                }
             }
         }
 
@@ -82,8 +131,8 @@ void testModel(int worldSize, int worldRank, double threshold, const std::string
     }
 }
 
-void useModel(int worldSize, int worldRank, double threshold, const std::string& datasetPath,
-             const std::string& modelAnswerFileName) {
+void useModel(int worldSize, int worldRank, int cvMethod, int threshold, const std::string& datasetPath,
+              const std::string& modelAnswerFileName) {
     std::string jsonObject = fileToString(datasetPath);
 
     rapidjson::Document document;
@@ -109,34 +158,79 @@ void useModel(int worldSize, int worldRank, double threshold, const std::string&
 
         localAnswer.reserve(imagesPerProcess * CSV_ROW_LENGTH);
 
-        for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
-            const rapidjson::Value& imagePair = results[imagePairIndex];
+        if (cvMethod == 1) {
+            for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
+                const rapidjson::Value &imagePair = results[imagePairIndex];
 
-            const rapidjson::Value& representativeData = imagePair["representativeData"];
+                const rapidjson::Value &representativeData = imagePair["representativeData"];
 
-            const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
-            const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
+                const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
+                const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
 
-            const cv::Mat firstImage = downloadImage(firstImageUrl);
-            const cv::Mat secondImage = downloadImage(secondImageUrl);
+                const cv::Mat firstImage = downloadImage(firstImageUrl, cv::IMREAD_COLOR);
+                const cv::Mat secondImage = downloadImage(secondImageUrl, cv::IMREAD_COLOR);
 
-            const std::vector<cv::Scalar> firstImageMoments = calculateMoments(firstImage);
-            const std::vector<cv::Scalar> secondImageMoments = calculateMoments(secondImage);
+                const std::vector<cv::Scalar> firstImageMoments = moments::calculateMoments(firstImage);
+                const std::vector<cv::Scalar> secondImageMoments = moments::calculateMoments(secondImage);
 
-            const bool isRecognized = areDuplicates(firstImageMoments, secondImageMoments, threshold);
+                const bool isRecognized = moments::areDuplicates(firstImageMoments, secondImageMoments, threshold);
 
-            localAnswer += imagePair["taskId"].GetString();
-            localAnswer += ",";
-            localAnswer += std::to_string(static_cast<int>(isRecognized));
-            if (imagePairIndex != endIndex - 1) {
-                localAnswer += "\n";
+                localAnswer += imagePair["taskId"].GetString();
+                localAnswer += ",";
+                localAnswer += std::to_string(static_cast<int>(isRecognized));
+                if (imagePairIndex != endIndex - 1) {
+                    localAnswer += "\n";
+                }
+
+                if (worldRank == ROOT_RANK) {
+                    double estimatedProgress = 100 * static_cast<double>(imagePairIndex - startIndex + 1) /
+                                               static_cast<double>(endIndex - startIndex);
+                    std::string progress = std::to_string(estimatedProgress);
+                    progress = std::string(progress.begin(), std::find(progress.begin(), progress.end(), '.'));
+                    std::cout << "\rRecognizing duplicates of images... Progress: " << progress + "%" << std::flush;
+                }
             }
+        } else if (cvMethod == 2) {
+            std::vector<std::vector<cv::DMatch>> imageMatches;
+            cv::Ptr<cv::SIFT> siftInstance = cv::SIFT::create();
 
-            if (worldRank == ROOT_RANK) {
-                double estimatedProgress = 100 * static_cast<double>(imagePairIndex - startIndex + 1) / static_cast<double>(endIndex - startIndex);
-                std::string progress = std::to_string(estimatedProgress);
-                progress = std::string(progress.begin(), std::find(progress.begin(), progress.end(), '.'));
-                std::cout << "\rRecognizing duplicates of images... Progress: " << progress + "%" << std::flush;
+            cv::Ptr<cv::flann::IndexParams> indexParams = cv::makePtr<cv::flann::KDTreeIndexParams>();
+            indexParams->setAlgorithm(cvflann::FLANN_INDEX_KDTREE);
+            indexParams->setInt("trees", 5);
+
+            cv::Ptr<cv::flann::SearchParams> searchParams = cv::makePtr<cv::flann::SearchParams>();
+            searchParams->setInt("checks", 50);
+
+            cv::Ptr<cv::FlannBasedMatcher> matcher = cv::makePtr<cv::FlannBasedMatcher>(indexParams, searchParams);
+            for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
+                const rapidjson::Value &imagePair = results[imagePairIndex];
+
+                const rapidjson::Value &representativeData = imagePair["representativeData"];
+
+                const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
+                const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
+
+                const cv::Mat firstImage = downloadImage(firstImageUrl, cv::IMREAD_GRAYSCALE);
+                const cv::Mat secondImage = downloadImage(secondImageUrl, cv::IMREAD_GRAYSCALE);
+
+                sift::calculateMatches(firstImage, secondImage, imageMatches, siftInstance, matcher);
+
+                const bool isRecognized = sift::areDuplicates(imageMatches, threshold);
+
+                localAnswer += imagePair["taskId"].GetString();
+                localAnswer += ",";
+                localAnswer += std::to_string(static_cast<int>(isRecognized));
+                if (imagePairIndex != endIndex - 1) {
+                    localAnswer += "\n";
+                }
+
+                if (worldRank == ROOT_RANK) {
+                    double estimatedProgress = 100 * static_cast<double>(imagePairIndex - startIndex + 1) /
+                                               static_cast<double>(endIndex - startIndex);
+                    std::string progress = std::to_string(estimatedProgress);
+                    progress = std::string(progress.begin(), std::find(progress.begin(), progress.end(), '.'));
+                    std::cout << "\rRecognizing duplicates of images... Progress: " << progress + "%" << std::flush;
+                }
             }
         }
 

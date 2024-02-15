@@ -11,27 +11,40 @@ int main(int argc, char* argv[]) {
     int worldRank;
     MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
 
-    int choice, answer, datasetLength;
-    double threshold;
-    std::string dataType, datasetPath, modelAnswerFileName;
+    int launchTypeChoice, cvMethodChoice, threshold, answer, datasetLength;
+    std::string dataType, cvMethodName, datasetPath, modelAnswerFileName;
 
     if (worldRank == ROOT_RANK) {
         std::cout << "Choose the program launch type:\n"
                   << "1) Model testing\n"
                   << "2) Model application\n";
 
-        while (!(std::cin >> choice) || (choice < 1 || choice > 2)) {
+        while (!(std::cin >> launchTypeChoice) || (launchTypeChoice < 1 || launchTypeChoice > 2)) {
             repeatEntering("Entered invalid choice. Please enter 1 or 2\n");
         }
 
-        std::cout << "Enter a positive number to use a threshold based on color moments:\n";
+        std::cout << "Choose the computer vision method:\n"
+                  << "1) Color Moments\n"
+                  << "2) Scale Invariant Feature Transform\n";
+
+        while (!(std::cin >> cvMethodChoice) || (cvMethodChoice < 1 || cvMethodChoice > 2)) {
+            repeatEntering("Entered invalid choice. Please enter 1 or 2\n");
+        }
+
+        if (cvMethodChoice == 1) {
+            cvMethodName = "Color Moments";
+        } else if (cvMethodChoice == 2) {
+            cvMethodName = "Scale Invariant Feature Transform";
+        }
+
+        std::cout << "Enter a natural number to use a threshold based on " << cvMethodName << " method:\n";
         while (!(std::cin >> threshold) || threshold <= 0) {
             repeatEntering("Entered invalid number. Please enter the positive number:\n");
         }
 
-        if (choice == 1) {
+        if (launchTypeChoice == 1) {
             dataType = "train or test";
-        } else if (choice == 2) {
+        } else if (launchTypeChoice == 2) {
             dataType = "validation";
         }
 
@@ -46,7 +59,7 @@ int main(int argc, char* argv[]) {
         }
         datasetLength = static_cast<int>(datasetPath.size());
 
-        if (choice == 2) {
+        if (launchTypeChoice == 2) {
             std::cout << "Did you use Docker launching program? If yes, model answer will be printed in console, but not CSV file\n"
                       << "1) Yes\n"
                       << "2) No\n";
@@ -72,16 +85,17 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    MPI_Bcast(&choice, 1, MPI_INT, ROOT_RANK, MPI_COMM_WORLD);
-    MPI_Bcast(&threshold, 1, MPI_DOUBLE, ROOT_RANK, MPI_COMM_WORLD);
+    MPI_Bcast(&launchTypeChoice, 1, MPI_INT, ROOT_RANK, MPI_COMM_WORLD);
+    MPI_Bcast(&cvMethodChoice, 1, MPI_INT, ROOT_RANK, MPI_COMM_WORLD);
+    MPI_Bcast(&threshold, 1, MPI_INT, ROOT_RANK, MPI_COMM_WORLD);
     MPI_Bcast(&datasetLength, 1, MPI_INT, ROOT_RANK, MPI_COMM_WORLD);
     datasetPath.resize(datasetLength);
     MPI_Bcast(datasetPath.data(), datasetLength, MPI_CHAR, ROOT_RANK, MPI_COMM_WORLD);
 
-    if (choice == 1) {
-        testModel(worldSize, worldRank, threshold, datasetPath);
-    } else if (choice == 2) {
-        useModel(worldSize, worldRank, threshold, datasetPath, modelAnswerFileName);
+    if (launchTypeChoice == 1) {
+        testModel(worldSize, worldRank, cvMethodChoice, threshold, datasetPath);
+    } else if (launchTypeChoice == 2) {
+        useModel(worldSize, worldRank, cvMethodChoice, threshold, datasetPath, modelAnswerFileName);
     }
 
     MPI_Finalize();
