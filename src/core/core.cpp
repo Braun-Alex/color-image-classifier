@@ -35,8 +35,10 @@ void testModel(int worldSize, int worldRank, int cvMethod, int threshold, const 
                 const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
                 const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
 
-                const cv::Mat firstImage = downloadImage(firstImageUrl, cv::IMREAD_COLOR);
-                const cv::Mat secondImage = downloadImage(secondImageUrl, cv::IMREAD_COLOR);
+                cv::Mat firstImage, secondImage;
+
+                resizeImage(downloadImage(firstImageUrl, cv::IMREAD_COLOR), firstImage, MAX_D);
+                resizeImage(downloadImage(secondImageUrl, cv::IMREAD_COLOR), secondImage, MAX_D);
 
                 const std::vector<cv::Scalar> firstImageMoments = moments::calculateMoments(firstImage);
                 const std::vector<cv::Scalar> secondImageMoments = moments::calculateMoments(secondImage);
@@ -82,12 +84,14 @@ void testModel(int worldSize, int worldRank, int cvMethod, int threshold, const 
                 const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
                 const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
 
-                const cv::Mat firstImage = downloadImage(firstImageUrl, cv::IMREAD_GRAYSCALE);
-                const cv::Mat secondImage = downloadImage(secondImageUrl, cv::IMREAD_GRAYSCALE);
+                cv::Mat firstImage, secondImage;
 
-                sift::calculateMatches(firstImage, secondImage, imageMatches, siftInstance, matcher);
+                resizeImage(downloadImage(firstImageUrl, cv::IMREAD_GRAYSCALE), firstImage, MAX_D);
+                resizeImage(downloadImage(secondImageUrl, cv::IMREAD_GRAYSCALE), secondImage, MAX_D);
 
-                const bool isRecognized = sift::areDuplicates(imageMatches, threshold);
+                int minImageKeypointSize = sift::calculateMatches(firstImage, secondImage, imageMatches, siftInstance, matcher);
+
+                const bool isRecognized = sift::areDuplicates(static_cast<int>(imageMatches.size()), minImageKeypointSize, threshold);
 
                 if (isRecognized && areExpectedDuplicates) {
                     localTP += 1;
@@ -167,8 +171,10 @@ void useModel(int worldSize, int worldRank, int cvMethod, int threshold, const s
                 const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
                 const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
 
-                const cv::Mat firstImage = downloadImage(firstImageUrl, cv::IMREAD_COLOR);
-                const cv::Mat secondImage = downloadImage(secondImageUrl, cv::IMREAD_COLOR);
+                cv::Mat firstImage, secondImage;
+
+                resizeImage(downloadImage(firstImageUrl, cv::IMREAD_COLOR), firstImage, MAX_D);
+                resizeImage(downloadImage(secondImageUrl, cv::IMREAD_COLOR), secondImage, MAX_D);
 
                 const std::vector<cv::Scalar> firstImageMoments = moments::calculateMoments(firstImage);
                 const std::vector<cv::Scalar> secondImageMoments = moments::calculateMoments(secondImage);
@@ -210,12 +216,14 @@ void useModel(int worldSize, int worldRank, int cvMethod, int threshold, const s
                 const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
                 const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
 
-                const cv::Mat firstImage = downloadImage(firstImageUrl, cv::IMREAD_GRAYSCALE);
-                const cv::Mat secondImage = downloadImage(secondImageUrl, cv::IMREAD_GRAYSCALE);
+                cv::Mat firstImage, secondImage;
 
-                sift::calculateMatches(firstImage, secondImage, imageMatches, siftInstance, matcher);
+                resizeImage(downloadImage(firstImageUrl, cv::IMREAD_GRAYSCALE), firstImage, MAX_D);
+                resizeImage(downloadImage(secondImageUrl, cv::IMREAD_GRAYSCALE), secondImage, MAX_D);
 
-                const bool isRecognized = sift::areDuplicates(imageMatches, threshold);
+                int minImageKeypointSize = sift::calculateMatches(firstImage, secondImage, imageMatches, siftInstance, matcher);
+
+                const bool isRecognized = sift::areDuplicates(static_cast<int>(imageMatches.size()), minImageKeypointSize, threshold);
 
                 localAnswer += imagePair["taskId"].GetString();
                 localAnswer += ",";

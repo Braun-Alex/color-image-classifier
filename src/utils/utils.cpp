@@ -65,3 +65,18 @@ void repeatEntering(const std::string& reason) {
     std::cin.clear();
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
+
+void resizeImage(const cv::Mat& srcImage, cv::Mat& dstImage, int maxD) {
+    double srcImageAspectRatio = srcImage.size().aspectRatio();
+
+    cv::Size newSize;
+    if (srcImageAspectRatio < 1.0) {
+        newSize.width = maxD;
+        newSize.height = static_cast<int>(maxD * srcImageAspectRatio);
+    } else {
+        newSize.width = static_cast<int>(maxD / srcImageAspectRatio);
+        newSize.height = maxD;
+    }
+
+    return cv::resize(srcImage, dstImage, newSize);
+}

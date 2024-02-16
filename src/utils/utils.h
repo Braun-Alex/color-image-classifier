@@ -12,3 +12,4 @@ size_t writeCallback(void* data, size_t size, size_t nMemBytes, std::vector<unsi
 cv::Mat downloadImage(const std::string& url, cv::ImreadModes mode);
 void saveFile(const std::string& fileName, const char* data);
 void repeatEntering(const std::string& reason);
+void resizeImage(const cv::Mat& srcImage, cv::Mat& dstImage, int maxPixels);
