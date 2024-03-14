@@ -11,26 +11,30 @@ void testModel(int worldSize, int worldRank, int cvMethod, int threshold, const 
     int localFP = 0;
     int localFN = 0;
 
+    double startMoment;
+
     if (document.IsObject()) {
         const rapidjson::Value& data = document["data"];
         const rapidjson::Value& results = data["results"];
 
-        auto imagesPerProcess = results.Size() / worldSize;
-        auto startIndex = worldRank * imagesPerProcess;
-        auto endIndex = (worldRank + 1) * imagesPerProcess;
+        const auto datasetSize = static_cast<int>(results.Size());
+        auto imagesPerProcess = datasetSize / worldSize;
+        auto remainder = datasetSize % worldSize;
+        auto startIndex = worldRank * imagesPerProcess + std::min(worldRank, remainder);
+        auto endIndex = startIndex + imagesPerProcess + (worldRank < remainder? 1: 0);
 
-        if (worldRank == worldSize - 1) {
-            endIndex = results.Size();
+        if (worldRank == ROOT_RANK) {
+            startMoment = MPI_Wtime();
         }
 
         if (cvMethod == 1) {
             for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
-                const rapidjson::Value &imagePair = results[imagePairIndex];
+                const rapidjson::Value& imagePair = results[imagePairIndex];
 
                 const std::string answer = imagePair["answers"][0]["answer"][0]["id"].GetString();
                 const int areExpectedDuplicates = std::stoi(answer);
 
-                const rapidjson::Value &representativeData = imagePair["representativeData"];
+                const rapidjson::Value& representativeData = imagePair["representativeData"];
 
                 const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
                 const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
@@ -74,12 +78,12 @@ void testModel(int worldSize, int worldRank, int cvMethod, int threshold, const 
 
             cv::Ptr<cv::FlannBasedMatcher> matcher = cv::makePtr<cv::FlannBasedMatcher>(indexParams, searchParams);
             for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
-                const rapidjson::Value &imagePair = results[imagePairIndex];
+                const rapidjson::Value& imagePair = results[imagePairIndex];
 
                 const std::string answer = imagePair["answers"][0]["answer"][0]["id"].GetString();
                 const int areExpectedDuplicates = std::stoi(answer);
 
-                const rapidjson::Value &representativeData = imagePair["representativeData"];
+                const rapidjson::Value& representativeData = imagePair["representativeData"];
 
                 const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
                 const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
@@ -117,7 +121,8 @@ void testModel(int worldSize, int worldRank, int cvMethod, int threshold, const 
         MPI_Reduce(&localFN, &totalFN, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
         if (worldRank == ROOT_RANK) {
-            const auto datasetSize = static_cast<int>(results.Size());
+            const double endMoment = MPI_Wtime();
+            const double duration = endMoment - startMoment;
 
             int totalTN = datasetSize - totalTP - totalFP - totalFN;
 
@@ -130,7 +135,8 @@ void testModel(int worldSize, int worldRank, int cvMethod, int threshold, const 
                       << "\n5) Total FN: " << totalFN
                       << "\n6) Weighted average precision: " << keyMetrics[0]
                       << "\n7) Weighted average recall: " << keyMetrics[1]
-                      << "\n8) Weighted average F1-score: " << keyMetrics[2] << "\n";
+                      << "\n8) Weighted average F1-score: " << keyMetrics[2]
+                      << "\n9) Execution time: " << duration << " seconds\n";
         }
     }
 }
@@ -146,13 +152,13 @@ void useModel(int worldSize, int worldRank, int cvMethod, int threshold, const s
         const rapidjson::Value& data = document["data"];
         const rapidjson::Value& results = data["results"];
 
-        auto imagesPerProcess = results.Size() / worldSize;
-        auto startIndex = worldRank * imagesPerProcess;
-        auto endIndex = (worldRank + 1) * imagesPerProcess;
+        const auto datasetSize = static_cast<int>(results.Size());
+        auto imagesPerProcess = datasetSize / worldSize;
+        auto remainder = datasetSize % worldSize;
+        auto startIndex = worldRank * imagesPerProcess + std::min(worldRank, remainder);
+        auto endIndex = startIndex + imagesPerProcess + (worldRank < remainder? 1: 0);
 
-        if (worldRank == worldSize - 1) {
-            endIndex = results.Size();
-        }
+        double startMoment;
 
         std::string localAnswer;
 
@@ -162,11 +168,15 @@ void useModel(int worldSize, int worldRank, int cvMethod, int threshold, const s
 
         localAnswer.reserve(imagesPerProcess * CSV_ROW_LENGTH);
 
+        if (worldRank == ROOT_RANK) {
+            startMoment = MPI_Wtime();
+        }
+
         if (cvMethod == 1) {
             for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
-                const rapidjson::Value &imagePair = results[imagePairIndex];
+                const rapidjson::Value& imagePair = results[imagePairIndex];
 
-                const rapidjson::Value &representativeData = imagePair["representativeData"];
+                const rapidjson::Value& representativeData = imagePair["representativeData"];
 
                 const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
                 const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
@@ -209,9 +219,9 @@ void useModel(int worldSize, int worldRank, int cvMethod, int threshold, const s
 
             cv::Ptr<cv::FlannBasedMatcher> matcher = cv::makePtr<cv::FlannBasedMatcher>(indexParams, searchParams);
             for (rapidjson::SizeType imagePairIndex = startIndex; imagePairIndex < endIndex; ++imagePairIndex) {
-                const rapidjson::Value &imagePair = results[imagePairIndex];
+                const rapidjson::Value& imagePair = results[imagePairIndex];
 
-                const rapidjson::Value &representativeData = imagePair["representativeData"];
+                const rapidjson::Value& representativeData = imagePair["representativeData"];
 
                 const std::string firstImageUrl = representativeData["image1"]["imageUrl"].GetString();
                 const std::string secondImageUrl = representativeData["image2"]["imageUrl"].GetString();
@@ -277,10 +287,13 @@ void useModel(int worldSize, int worldRank, int cvMethod, int threshold, const s
         MPI_Gatherv(processAnswer, answerLength, MPI_CHAR, totalAnswer, recvcounts, displs, MPI_CHAR, ROOT_RANK, MPI_COMM_WORLD);
 
         if (worldRank == ROOT_RANK) {
+            const double endMoment = MPI_Wtime();
+            const double duration = endMoment - startMoment;
+
             std::cout << "\n";
 
             if (modelAnswerFileName.empty()) {
-                std::cout << totalAnswer << "\n";
+                std::cout << totalAnswer << "\nExecution time: " << duration << " seconds\n";
             } else {
                 saveFile(modelAnswerFileName, totalAnswer);
                 std::cout << "Model answer has been saved in CMake build directory as " << modelAnswerFileName << " file\n";
