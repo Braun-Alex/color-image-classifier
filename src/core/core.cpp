@@ -218,7 +218,7 @@ void useModel(int cvMethod, int threshold, const std::string& datasetPath,
         std::cout << "\n";
 
         if (modelAnswerFileName.empty()) {
-            std::cout << answers << "\nExecution time: " << duration.count() << " seconds";
+            std::cout << answers << "Execution time: " << duration.count() << " seconds\n";
         } else {
             saveFile(modelAnswerFileName, answers.c_str());
             std::cout << "Model answer has been saved in CMake build directory as " << modelAnswerFileName << " file\n";
