@@ -26,10 +26,10 @@ set(SOURCES
 )
 
 find_package(CURL REQUIRED)
-find_package(MPI REQUIRED)
+find_package(OpenMP REQUIRED)
 find_package(OpenCV REQUIRED)
 
 add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${MPI_CXX_INCLUDE_PATH} ${HEADER_PATHS})
-target_link_libraries(${PROJECT_NAME} ${CURL_LIBRARIES} ${MPI_CXX_LIBRARIES} ${OpenCV_LIBS})
+target_include_directories(${PROJECT_NAME} PRIVATE ${HEADER_PATHS})
+target_link_libraries(${PROJECT_NAME} ${CURL_LIBRARIES} OpenMP::OpenMP_CXX ${OpenCV_LIBS})
