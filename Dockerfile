@@ -7,9 +7,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     cmake \
     g++ \
     rapidjson-dev \
-    openmpi-bin \
-    openmpi-common \
-    libopenmpi-dev \
     libopencv-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -17,6 +14,4 @@ COPY . /classifier/
 
 RUN cmake . && make
 
-RUN chmod +x /classifier/entrypoint.sh
-
-ENTRYPOINT ["/classifier/entrypoint.sh"]
+CMD ./color_image_classifier
